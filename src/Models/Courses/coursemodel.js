@@ -41,6 +41,7 @@ const instructorSchema = new mongoose.Schema(
 
 const courseSchema = new mongoose.Schema(
   {
+    CourseMotherId: { type: String, required: true, unique: true },
     coursename: { type: String, required: true, unique: true },
     category: { type: String, required: true },
     courseduration: {
@@ -94,4 +95,11 @@ courseSchema.pre("save", function (next) {
   }
   next();
 });
+// Indexes for better performance
+courseSchema.index({ coursename: 1, isDeleted: 1 });
+courseSchema.index({ category: 1, level: 1, language: 1 });
+courseSchema.index({ price: 1, rating: 1 });
+courseSchema.index({ isPublished: 1, createdAt: -1 });
+courseSchema.index({ studentEnrollmentCount: -1 });
+courseSchema.index({ tags: 1 });
 export default mongoose.model("Course", courseSchema);

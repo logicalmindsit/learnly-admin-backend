@@ -1,5 +1,6 @@
+
 import Course from "../../Models/Courses/coursemodel.js";
-import { PutObjectCommand,DeleteObjectCommand  } from "@aws-sdk/client-s3";
+import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import s3 from "../../DB/adudios3.js";
 import dotenv from "dotenv";
 import path from "path";
@@ -34,14 +35,48 @@ const uploadToS3 = async (file, folder, rawName = null) => {
     };
   } catch (error) {
     console.error("❌ S3 upload error:", error);
-   throw new Error(`Failed to upload file to S3: ${error.message}`);
+    throw new Error(`Failed to upload file to S3: ${error.message}`);
   }
+};
+
+const generateCourseMotherId = (coursename, courseduration) => {
+  // Sanitize & create abbreviation
+  const nameAbbreviation = coursename
+    .split(/\s+/)
+    .map((word) => word[0]) // Take first letter of each word
+    .join("")
+    .toUpperCase()
+    .substring(0, 10); // Optional: limit max length
+
+  const durationMap = {
+    "6 months": "6M",
+    "1 year": "1Y",
+    "2 years": "2Y",
+  };
+
+  const durationCode = durationMap[courseduration] || "XX";
+  const id = `${nameAbbreviation}-${durationCode}`;
+  console.log(`🆔 Generated CourseMotherId: ${id}`);
+  return id;
 };
 
 // Create Course
 export const createCourse = async (req, res) => {
   try {
-    const { coursename, category, courseduration } = req.body;
+    const {
+      coursename,
+      category,
+      courseduration,
+      CourseMotherId,
+      useAutoCourseMotherId,
+    } = req.body;
+    console.log("📝 Request body:", req.body);
+    // Auto-generate CourseMotherId if useAutoCourseMotherId is true or CourseMotherId is not provided
+    let finalCourseMotherId = CourseMotherId;
+    if (useAutoCourseMotherId === "true" || !CourseMotherId) {
+      console.log("🔄 Auto-generating CourseMotherId");
+      finalCourseMotherId = generateCourseMotherId(coursename, courseduration);
+    }
 
     if (!coursename || !category || !courseduration) {
       return res.status(400).json({
@@ -126,6 +161,7 @@ export const createCourse = async (req, res) => {
 
     // Assemble course
     const course = new Course({
+      CourseMotherId: finalCourseMotherId,
       coursename,
       category,
       courseduration,
@@ -158,11 +194,25 @@ export const createCourse = async (req, res) => {
         : [],
     });
 
+    console.log("🛠️ Saving course to DB...");
     const saved = await course.save();
-    res.status(201).json(saved);
+    console.log("✅ Course created successfully:", saved._id);
+
+    res.status(201).json({
+      success: true,
+      message: "Course created successfully",
+      data: {
+        courseId: saved._id,
+        CourseMotherId: saved.CourseMotherId,
+        coursename: saved.coursename,
+      },
+    });
   } catch (error) {
     console.error("❌ Course creation failed:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
   }
 };
 
@@ -206,150 +256,11 @@ export const getCourseByName = async (req, res) => {
   }
 };
 
-// Update the data 
-// export const updateCourse = async (req, res) => {
-//   try {
-//     const courseName = req.params.coursename;
-//     const existingCourse = await Course.findOne({ coursename: courseName });
-
-//     if (!existingCourse) {
-//       return res.status(404).json({ error: "Course not found" });
-//     }
-
-//     const courseFolder = existingCourse.coursename.toLowerCase().replace(/\s+/g, "-");
-//     const files = req.files || [];
-//     const fileMap = {};
-
-//     // 🔁 Upload files to S3
-//     for (const file of files) {
-//       const field = file.fieldname;
-//       let folder = "misc";
-
-//       if (field.includes("previewvideo")) folder = "preview";
-//       else if (field.includes("thumbnail")) folder = "thumbnail";
-//       else if (field.includes("audio")) folder = "audio";
-//       else if (field.includes("video")) folder = "video";
-//       else if (field.includes("pdf")) folder = "pdf";
-
-//       let rawName = null;
-//       const match = field.match(
-//         /chapters\[(\d+)\]\.lessons\[(\d+)\]\.(audio|video|pdf)/
-//       );
-//       if (match) {
-//         const [_, chIdx, lsnIdx, type] = match;
-//         const key = `chapters[${chIdx}].lessons[${lsnIdx}].${type}name`;
-//         const val = req.body[key];
-//         if (Array.isArray(val)) rawName = val[fileMap[field]?.length || 0];
-//         else rawName = val;
-//       }
-
-//       const { name, url } = await uploadToS3(
-//         file,
-//         `${courseFolder}/${folder}`,
-//         rawName
-//       );
-
-//       if (!fileMap[field]) fileMap[field] = [];
-//       fileMap[field].push({ name, url });
-//     }
-
-//     // 📚 Rebuild chapters and lessons from request body
-//     const updatedChapters = [];
-//     let chapterIndex = 0;
-
-//     while (req.body[`chapters[${chapterIndex}].title`]) {
-//       const title = req.body[`chapters[${chapterIndex}].title`];
-//       const lessons = [];
-
-//       let lessonIndex = 0;
-//       while (
-//         req.body[`chapters[${chapterIndex}].lessons[${lessonIndex}].lessonname`]
-//       ) {
-//         const base = `chapters[${chapterIndex}].lessons[${lessonIndex}]`;
-
-//         lessons.push({
-//           lessonname: req.body[`${base}.lessonname`],
-//           audioFile: fileMap[`${base}.audio`] || [],
-//           videoFile: fileMap[`${base}.video`] || [],
-//           pdfFile: fileMap[`${base}.pdf`] || [],
-//         });
-
-//         lessonIndex++;
-//       }
-
-//       updatedChapters.push({ title, lessons });
-//       chapterIndex++;
-//     }
-
-//     // 🧩 Update basic fields
-//     existingCourse.coursename = req.body.coursename || existingCourse.coursename;
-//     existingCourse.category = req.body.category || existingCourse.category;
-//     existingCourse.courseduration = req.body.courseduration || existingCourse.courseduration;
-
-//     // 🔁 Replace thumbnail or keep existing
-//     existingCourse.thumbnail =
-//       fileMap["thumbnail"]?.[0]?.url || req.body.thumbnail || existingCourse.thumbnail;
-
-//     // 🔁 Replace preview video or keep existing
-//     existingCourse.previewvedio =
-//       fileMap["previewvideo"]?.[0]?.url || req.body.previewvedio || existingCourse.previewvedio;
-
-//     // ⏱️ Update content duration
-//     existingCourse.contentduration = {
-//       hours: parseInt(req.body["contentduration.hours"]) || existingCourse.contentduration.hours || 0,
-//       minutes: parseInt(req.body["contentduration.minutes"]) || existingCourse.contentduration.minutes || 0,
-//     };
-
-//     // 🏷️ Update metadata
-//     existingCourse.level = req.body.level || existingCourse.level;
-//     existingCourse.language = req.body.language || existingCourse.language;
-//     existingCourse.certificates = req.body.certificates || existingCourse.certificates;
-
-//     existingCourse.instructor = {
-//       name: req.body["instructor.name"] || existingCourse.instructor?.name,
-//       role: req.body["instructor.role"] || existingCourse.instructor?.role,
-//       socialmedia_id: req.body["instructor.socialmedia_id"] || existingCourse.instructor?.socialmedia_id,
-//     };
-
-//     existingCourse.description = req.body.description || existingCourse.description;
-
-//     if (req.body.whatYoullLearn) {
-//       existingCourse.whatYoullLearn = Array.isArray(req.body.whatYoullLearn)
-//         ? req.body.whatYoullLearn
-//         : req.body.whatYoullLearn.split(",");
-//     }
-
-//     // 💵 Update price
-//     const amount = parseFloat(req.body["price.amount"]) || existingCourse.price.amount;
-//     const discount = parseFloat(req.body["price.discount"]) || existingCourse.price.discount || 0;
-//     const finalPrice = amount * (1 - discount / 100);
-
-//     existingCourse.price = {
-//       amount,
-//       currency: req.body["price.currency"] || existingCourse.price.currency || "INR",
-//       discount,
-//       finalPrice,
-//     };
-
-//     // ✅ Replace chapters (instead of appending)
-//     if (updatedChapters.length > 0) {
-//       existingCourse.chapters = updatedChapters;
-//     }
-
-//     const updated = await existingCourse.save();
-//     res.status(200).json(updated);
-//   } catch (error) {
-//     console.error("❌ Update course error:", error);
-//     res.status(500).json({ error: error.message });
-//   }
-// };
-
-
 const deleteFromS3 = async (fileUrl) => {
   try {
     const parsedUrl = new URL(fileUrl);
     const Key = parsedUrl.pathname.substring(1); // Remove leading slash
-    
+
     const command = new DeleteObjectCommand({
       Bucket: process.env.AWS_S3_BUCKET_NAME,
       Key,
@@ -372,7 +283,9 @@ export const updateCourse = async (req, res) => {
       return res.status(404).json({ error: "Course not found" });
     }
 
-    const courseFolder = existingCourse.coursename.toLowerCase().replace(/\s+/g, "-");
+    const courseFolder = existingCourse.coursename
+      .toLowerCase()
+      .replace(/\s+/g, "-");
     const files = req.files || [];
     const fileMap = {};
     const filesToDelete = req.body.filesToDelete || [];
@@ -382,7 +295,8 @@ export const updateCourse = async (req, res) => {
       await Promise.all(
         filesToDelete.map(async (fileData) => {
           try {
-            const file = typeof fileData === 'string' ? JSON.parse(fileData) : fileData;
+            const file =
+              typeof fileData === "string" ? JSON.parse(fileData) : fileData;
             if (!file.url) return;
             await deleteFromS3(file.url);
           } catch (error) {
@@ -408,7 +322,7 @@ export const updateCourse = async (req, res) => {
       const match = field.match(
         /chapters\[(\d+)\]\.lessons\[(\d+)\]\.(audio|video|pdf)File/
       );
-      
+
       if (match) {
         const [_, chIdx, lsnIdx, type] = match;
         const key = `chapters[${chIdx}].lessons[${lsnIdx}].${type}name`;
@@ -437,35 +351,38 @@ export const updateCourse = async (req, res) => {
 
       let lessonIndex = 0;
       while (
-        req.body[`chapters[${chapterIndex}].lessons[${lessonIndex}].lessonname`] !== undefined
+        req.body[
+          `chapters[${chapterIndex}].lessons[${lessonIndex}].lessonname`
+        ] !== undefined
       ) {
         const base = `chapters[${chapterIndex}].lessons[${lessonIndex}]`;
 
         // Get existing lesson or create new one
-        const existingLesson = existingCourse.chapters[chapterIndex]?.lessons[lessonIndex] || 
-                             { audioFile: [], videoFile: [], pdfFile: [] };
+        const existingLesson = existingCourse.chapters[chapterIndex]?.lessons[
+          lessonIndex
+        ] || { audioFile: [], videoFile: [], pdfFile: [] };
 
         // Filter out deleted files and add new ones
         const lessonData = {
           lessonname: req.body[`${base}.lessonname`],
           audioFile: [
-            ...(existingLesson.audioFile || []).filter(file => 
-              !filesToDelete.some(f => f.url === file.url)
+            ...(existingLesson.audioFile || []).filter(
+              (file) => !filesToDelete.some((f) => f.url === file.url)
             ),
-            ...(fileMap[`${base}.audioFile`] || [])
+            ...(fileMap[`${base}.audioFile`] || []),
           ],
           videoFile: [
-            ...(existingLesson.videoFile || []).filter(file => 
-              !filesToDelete.some(f => f.url === file.url)
+            ...(existingLesson.videoFile || []).filter(
+              (file) => !filesToDelete.some((f) => f.url === file.url)
             ),
-            ...(fileMap[`${base}.videoFile`] || [])
+            ...(fileMap[`${base}.videoFile`] || []),
           ],
           pdfFile: [
-            ...(existingLesson.pdfFile || []).filter(file => 
-              !filesToDelete.some(f => f.url === file.url)
+            ...(existingLesson.pdfFile || []).filter(
+              (file) => !filesToDelete.some((f) => f.url === file.url)
             ),
-            ...(fileMap[`${base}.pdfFile`] || [])
-          ]
+            ...(fileMap[`${base}.pdfFile`] || []),
+          ],
         };
 
         lessons.push(lessonData);
@@ -477,10 +394,12 @@ export const updateCourse = async (req, res) => {
     }
 
     // Step 4: Update course metadata
-    existingCourse.coursename = req.body.coursename || existingCourse.coursename;
+    existingCourse.coursename =
+      req.body.coursename || existingCourse.coursename;
     existingCourse.category = req.body.category || existingCourse.category;
-    existingCourse.courseduration = req.body.courseduration || existingCourse.courseduration;
-    
+    existingCourse.courseduration =
+      req.body.courseduration || existingCourse.courseduration;
+
     // Handle thumbnail update/removal
     if (fileMap["thumbnail"]?.[0]) {
       existingCourse.thumbnail = fileMap["thumbnail"][0].url;
@@ -505,35 +424,50 @@ export const updateCourse = async (req, res) => {
 
     // Update other fields
     existingCourse.contentduration = {
-      hours: parseInt(req.body["contentduration.hours"]) || existingCourse.contentduration.hours || 0,
-      minutes: parseInt(req.body["contentduration.minutes"]) || existingCourse.contentduration.minutes || 0,
+      hours:
+        parseInt(req.body["contentduration.hours"]) ||
+        existingCourse.contentduration.hours ||
+        0,
+      minutes:
+        parseInt(req.body["contentduration.minutes"]) ||
+        existingCourse.contentduration.minutes ||
+        0,
     };
-    
+
     existingCourse.level = req.body.level || existingCourse.level;
     existingCourse.language = req.body.language || existingCourse.language;
-    existingCourse.certificates = req.body.certificates || existingCourse.certificates;
-    
+    existingCourse.certificates =
+      req.body.certificates || existingCourse.certificates;
+
     existingCourse.instructor = {
       name: req.body["instructor.name"] || existingCourse.instructor?.name,
       role: req.body["instructor.role"] || existingCourse.instructor?.role,
-      socialmedia_id: req.body["instructor.socialmedia_id"] || existingCourse.instructor?.socialmedia_id,
+      socialmedia_id:
+        req.body["instructor.socialmedia_id"] ||
+        existingCourse.instructor?.socialmedia_id,
     };
-    
-    existingCourse.description = req.body.description || existingCourse.description;
+
+    existingCourse.description =
+      req.body.description || existingCourse.description;
 
     if (req.body.whatYoullLearn) {
       existingCourse.whatYoullLearn = Array.isArray(req.body.whatYoullLearn)
         ? req.body.whatYoullLearn
-        : req.body.whatYoullLearn.split(",").map(item => item.trim());
+        : req.body.whatYoullLearn.split(",").map((item) => item.trim());
     }
 
     // Update pricing
-    const amount = parseFloat(req.body["price.amount"]) || existingCourse.price.amount;
-    const discount = parseFloat(req.body["price.discount"]) || existingCourse.price.discount || 0;
-    
+    const amount =
+      parseFloat(req.body["price.amount"]) || existingCourse.price.amount;
+    const discount =
+      parseFloat(req.body["price.discount"]) ||
+      existingCourse.price.discount ||
+      0;
+
     existingCourse.price = {
       amount,
-      currency: req.body["price.currency"] || existingCourse.price.currency || "INR",
+      currency:
+        req.body["price.currency"] || existingCourse.price.currency || "INR",
       discount,
       finalPrice: amount * (1 - discount / 100),
     };
@@ -545,18 +479,87 @@ export const updateCourse = async (req, res) => {
 
     // Save the updated course
     const updatedCourse = await existingCourse.save();
-    
+
     res.status(200).json({
       success: true,
       message: "Course updated successfully",
-      course: updatedCourse
+      course: updatedCourse,
     });
-
   } catch (error) {
     console.error("❌ Update course error:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: error.message 
+      error: error.message,
+    });
+  }
+};
+
+// Delete course function (was missing)
+export const deleteCourse = async (req, res) => {
+  try {
+    const { coursename } = req.params;
+    const { hard = false } = req.query;
+
+    if (!coursename) {
+      return res.status(400).json({
+        success: false,
+        error: "coursename is required",
+      });
+    }
+
+    const course = await Course.findOne({ coursename });
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        error: "Course not found",
+      });
+    }
+
+    if (hard === "true") {
+      // Hard delete: Remove from database and clean up S3 files
+      const deletePromises = [];
+
+      if (course.thumbnail) deletePromises.push(deleteFromS3(course.thumbnail));
+      if (course.previewvedio)
+        deletePromises.push(deleteFromS3(course.previewvedio));
+
+      course.chapters.forEach((chapter) => {
+        chapter.lessons.forEach((lesson) => {
+          lesson.audioFile.forEach((file) =>
+            deletePromises.push(deleteFromS3(file.url))
+          );
+          lesson.videoFile.forEach((file) =>
+            deletePromises.push(deleteFromS3(file.url))
+          );
+          lesson.pdfFile.forEach((file) =>
+            deletePromises.push(deleteFromS3(file.url))
+          );
+        });
+      });
+
+      await Promise.allSettled(deletePromises);
+      await Course.findByIdAndDelete(course._id);
+
+      res.status(200).json({
+        success: true,
+        message: "Course permanently deleted successfully",
+      });
+    } else {
+      // Soft delete
+      course.isDeleted = true;
+      course.deletedAt = new Date();
+      await course.save();
+
+      res.status(200).json({
+        success: true,
+        message: "Course deleted successfully",
+      });
+    }
+  } catch (error) {
+    console.error("❌ Delete course error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
     });
   }
 };
