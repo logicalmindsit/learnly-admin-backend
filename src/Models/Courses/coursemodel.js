@@ -41,7 +41,7 @@ const instructorSchema = new mongoose.Schema(
 // EMI Schema (for students)
 const emiSchema = new mongoose.Schema(
   {
-    isAvailable: { type: Boolean, default: false },
+    isAvailable: { type: Boolean, default: true },
     emiDurationMonths: { type: Number, default: null },
     monthlyAmount: { type: Number },
     totalAmount: { type: Number },
