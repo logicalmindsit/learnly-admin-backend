@@ -1,4 +1,3 @@
-
 import Course from "../../Models/Courses/coursemodel.js";
 import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import s3 from "../../DB/adudios3.js";
@@ -21,7 +20,7 @@ const uploadToS3 = async (file, folder, rawName = null) => {
   const Key = `${folder}/${filename}`;
 
   const command = new PutObjectCommand({
-    Bucket: process.env.AWS_S3_BUCKET_NAME,
+    Bucket: process.env.AWS_S3_BUCKET_SCHOOLEMY,
     Key,
     Body: file.buffer,
     ContentType: file.mimetype,
@@ -31,7 +30,7 @@ const uploadToS3 = async (file, folder, rawName = null) => {
     await s3.send(command);
     return {
       name: filename,
-      url: `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${Key}`,
+      url: `https://${process.env.AWS_S3_BUCKET_SCHOOLEMY}.s3.${process.env.AWS_REGION}.amazonaws.com/${Key}`,
     };
   } catch (error) {
     console.error("❌ S3 upload error:", error);
@@ -69,6 +68,7 @@ export const createCourse = async (req, res) => {
       courseduration,
       CourseMotherId,
       useAutoCourseMotherId,
+      emi,
     } = req.body;
     console.log("📝 Request body:", req.body);
     // Auto-generate CourseMotherId if useAutoCourseMotherId is true or CourseMotherId is not provided
@@ -81,6 +81,14 @@ export const createCourse = async (req, res) => {
     if (!coursename || !category || !courseduration) {
       return res.status(400).json({
         error: "coursename, category, and courseduration are required",
+      });
+    }
+
+    //EMI -Validation
+    if (emi?.isAvailable && (!emi.emiDurationMonths || !emi.totalAmount)) {
+      return res.status(400).json({
+        error:
+          "If EMI is available, emiDurationMonths and totalAmount are required",
       });
     }
 
@@ -192,6 +200,13 @@ export const createCourse = async (req, res) => {
         : typeof req.body.whatYoullLearn === "string"
         ? req.body.whatYoullLearn.split(",")
         : [],
+      emi: {
+        isAvailable: emi?.isAvailable || false,
+        emiDurationMonths: emi?.emiDurationMonths || null,
+        monthlyAmount: emi?.monthlyAmount || null,
+        totalAmount: emi?.totalAmount || null,
+        notes: emi?.notes || "",
+      },
     });
 
     console.log("🛠️ Saving course to DB...");
@@ -220,7 +235,7 @@ export const createCourse = async (req, res) => {
 export const getCourseNames = async (req, res) => {
   try {
     const courses = await Course.find({}, "coursename chapters.title");
-    
+
     // Optional: Format the response if needed
     const formattedCourses = courses.map((course) => ({
       coursename: course.coursename,
@@ -256,13 +271,14 @@ export const getCourseByName = async (req, res) => {
   }
 };
 
+// Delete file from S3
 const deleteFromS3 = async (fileUrl) => {
   try {
     const parsedUrl = new URL(fileUrl);
     const Key = parsedUrl.pathname.substring(1); // Remove leading slash
 
     const command = new DeleteObjectCommand({
-      Bucket: process.env.AWS_S3_BUCKET_NAME,
+      Bucket: process.env.AWS_S3_BUCKET_SCHOOLEMY,
       Key,
     });
 
@@ -274,6 +290,7 @@ const deleteFromS3 = async (fileUrl) => {
   }
 };
 
+// Update Course
 export const updateCourse = async (req, res) => {
   try {
     const courseName = req.params.coursename;
@@ -330,6 +347,8 @@ export const updateCourse = async (req, res) => {
         if (Array.isArray(val)) rawName = val[fileMap[field]?.length || 0];
         else rawName = val;
       }
+
+      console.log("📝 Raw name from body (update):", rawName); // Debug log for raw name in update
 
       const uploadedFile = await uploadToS3(
         file,
@@ -472,6 +491,37 @@ export const updateCourse = async (req, res) => {
       finalPrice: amount * (1 - discount / 100),
     };
 
+    // Update EMI
+    const emi = req.body.emi || {};
+    const existingEmi = existingCourse.emi || {};
+    existingCourse.emi = {
+      isAvailable:
+        emi.isAvailable !== undefined
+          ? emi.isAvailable
+          : existingEmi.isAvailable || false,
+      emiDurationMonths:
+        emi.emiDurationMonths || existingEmi.emiDurationMonths || null,
+      totalAmount: emi.totalAmount || existingEmi.totalAmount || null,
+      notes: emi.notes || existingEmi.notes || "",
+      monthlyAmount:
+        emi.monthlyAmount ||
+        (emi.totalAmount && emi.emiDurationMonths
+          ? emi.totalAmount / emi.emiDurationMonths
+          : existingEmi.monthlyAmount) ||
+        null,
+    };
+
+    // Validate updated EMI
+    if (
+      existingCourse.emi.isAvailable &&
+      (!existingCourse.emi.emiDurationMonths || !existingCourse.emi.totalAmount)
+    ) {
+      return res.status(400).json({
+        error:
+          "If EMI is available, emiDurationMonths and totalAmount are required",
+      });
+    }
+
     // Update chapters
     if (updatedChapters.length > 0) {
       existingCourse.chapters = updatedChapters;
@@ -561,5 +611,35 @@ export const deleteCourse = async (req, res) => {
       success: false,
       error: error.message,
     });
+  }
+};
+
+// Get courses by category
+export const getCoursesByCategory = async (req, res) => {
+  try {
+    // URL-லிருந்து category பெயரைப் பெறுகிறோம் (e.g., "Yoga", "Siddha Medicine")
+    const { categoryName } = req.params;
+
+    if (!categoryName) {
+      return res.status(400).json({ error: "Category name is required" });
+    }
+
+    // category ஃபீல்டை வைத்து டேட்டாபேஸில் தேடுகிறோம்
+    const courses = await Course.find({ category: categoryName });
+
+    if (!courses || courses.length === 0) {
+      return res
+        .status(404)
+        .json({ message: `No courses found for category: ${categoryName}` });
+    }
+
+    res.status(200).json({
+      success: true,
+      count: courses.length,
+      data: courses,
+    });
+  } catch (error) {
+    console.error(`❌ Error fetching courses by category: ${error.message}`);
+    res.status(500).json({ success: false, error: error.message });
   }
 };

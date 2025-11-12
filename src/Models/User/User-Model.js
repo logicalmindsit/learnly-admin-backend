@@ -83,6 +83,9 @@ const userSchema = new Schema(
     registerOtp: { type: String, default: undefined },
     registerOtpExpiresAt: { type: Date, default: undefined },
     registerOtpVerified: { type: Boolean, default: false },
+    
+    // First Time Login Flag
+    isFirstTime: { type: Boolean, default: false },
 
     // Forgot Password OTP
     forgotPasswordOtp: { type: String, default: undefined },

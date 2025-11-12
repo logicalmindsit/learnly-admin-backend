@@ -55,6 +55,23 @@ const adminSchema = new Schema(
       enum: ["male", "female"],
       required: true,
     },
+    age: { type: Number, min: 18, max: 100 },
+    permanentAddress: { type: String, trim: true },
+    tempAddress: { type: String, trim: true },
+    govtIdProofs: [
+      {
+        idType: {
+          type: String,
+          enum: ["Aadhar", "PAN", "Passport", "VoterID", "DrivingLicense"],
+          required: true,
+        },
+        idNumber: { type: String, required: true, trim: true },
+        documentImage: { type: String }, // URL or base64 image of the document
+      },
+    ],
+    designationInBoard: { type: String, trim: true },
+
+    profilePictureUpload: { type: String }, // URL or base64 image
     role: {
       type: String,
       enum: [

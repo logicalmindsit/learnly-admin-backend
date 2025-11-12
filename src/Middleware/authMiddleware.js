@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+
 dotenv.config();
 
 const verifyToken = async (req, res, next) => {
@@ -11,7 +12,10 @@ const verifyToken = async (req, res, next) => {
       "/adminlogin",
       "/verify-otp",
       "/forgot-password",
-      "/reset-password"
+      "/reset-password",
+      "/api/blog/published",
+      "/api/blog/search",
+      "/api/blog/admin/all",
     ];
 
     if (publicPaths.includes(PATH)) {
@@ -35,13 +39,20 @@ const verifyToken = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // ✅ Attach user info to request
-    req.user = { id: decoded.id, email: decoded.email, role: decoded.role, name: decoded.name };
+    req.user = {
+      id: decoded.id,
+      email: decoded.email,
+      role: decoded.role,
+      name: decoded.name,
+    };
     next();
   } catch (error) {
     if (error?.name === "TokenExpiredError") {
       return res.status(401).json({ message: "Access token has expired" });
     }
-    return res.status(403).json({ message: "Token verification failed", error: error.message });
+    return res
+      .status(403)
+      .json({ message: "Token verification failed", error: error.message });
   }
 };
 

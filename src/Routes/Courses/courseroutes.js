@@ -4,7 +4,8 @@ import {
   createCourse,
   getCourseNames,
   getCourseByName,
-  updateCourse
+  updateCourse,
+  getCoursesByCategory
 } from "../../Controllers/Courses/coursecontroller.js";
 
 // Initialize router
@@ -24,5 +25,8 @@ router.get("/courses/:coursename", getCourseByName);
 
 // PUT - Update course by ID (add chapters/lessons/media)
 router.put("/course/update/:coursename", upload.any(), updateCourse);
+
+// GET - Retrieve courses by category
+router.get("/courses/category/:categoryName", getCoursesByCategory);
 
 export default router;

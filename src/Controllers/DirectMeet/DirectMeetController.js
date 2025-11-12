@@ -1,5 +1,5 @@
 import DirectMeet from '../../Models/DirectMeet/DirectMeetModel.js';
-import { sendDirectMeetNotificationToAllUsers } from '../../Utils/DirectMeetNotification.js';
+import { sendDirectMeetNotificationToAllUsers } from '../../Notification/DirectMeet-Email.js';
 
 // Helper function to generate unique meet_id
 const generateMeetId = async () => {

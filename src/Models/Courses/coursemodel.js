@@ -38,6 +38,17 @@ const instructorSchema = new mongoose.Schema(
   },
   { _id: false }
 );
+// EMI Schema (for students)
+const emiSchema = new mongoose.Schema(
+  {
+    isAvailable: { type: Boolean, default: false },
+    emiDurationMonths: { type: Number, default: null },
+    monthlyAmount: { type: Number },
+    totalAmount: { type: Number },
+    notes: { type: String },
+  },
+  { _id: false }
+);
 
 const courseSchema = new mongoose.Schema(
   {
@@ -78,6 +89,7 @@ const courseSchema = new mongoose.Schema(
       required: true,
     },
     instructor: instructorSchema,
+    emi: emiSchema,
     description: { type: String },
     whatYoullLearn: [String],
     review: [{ type: String }],
@@ -102,4 +114,6 @@ courseSchema.index({ price: 1, rating: 1 });
 courseSchema.index({ isPublished: 1, createdAt: -1 });
 courseSchema.index({ studentEnrollmentCount: -1 });
 courseSchema.index({ tags: 1 });
-export default mongoose.model("Course", courseSchema);
+
+const Course = mongoose.model("Course", courseSchema);
+export default Course;

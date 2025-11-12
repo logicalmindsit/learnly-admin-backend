@@ -1,6 +1,6 @@
 import Meeting from '../../Models/BOS/bos-Meeting.js';
-import Notification from '../../Notification/model.js'; 
-import { sendMeetingEmail } from '../../Utils/Bos-notification.js';
+import Notification from '../../Models/Notification-Model/Notification-model.js'; 
+import { sendMeetingEmail } from '../../Notification/Bos-Email.js';
 
 export async function createMeeting(req, res) {
   try {

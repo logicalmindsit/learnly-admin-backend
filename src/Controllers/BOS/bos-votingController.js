@@ -1,6 +1,6 @@
 import VotingPoll from "../../Models/BOS/bos-Voting.js";
-import Admin from "../../Models/Admin/Modellogin.js";
-import { sendVotingPollEmail, sendVoteConfirmationEmail } from "../../Utils/Bos-notification.js";
+import Admin from "../../Models/Admin/Admin-login-Model.js";
+import { sendVotingPollEmail, sendVoteConfirmationEmail } from "../../Notification/Bos-Email.js";
 
 // Generate Poll ID
 const generatePollId = () => {

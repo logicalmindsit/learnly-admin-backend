@@ -1,4 +1,4 @@
-import Notification from './model.js';
+import Notification from '../../Models/Notification-Model/Notification-model.js';
 
 // GET: Fetch notifications by role
 export const getNotificationsByRole = async (req, res) => {

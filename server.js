@@ -7,6 +7,9 @@ import { verifyToken } from "./src/Middleware/authMiddleware.js";
 //Routs imports
 import Login from "./src/Routes/Admin/loginRoutes.js";
 
+// Admin 
+import AdminRoutes from "./src/Routes/Admin/AdminRoutes.js";
+
 //courses
 import Course from "./src/Routes/Courses/courseroutes.js";
 import Exam from "./src/Routes/Courses/ExamQuestionRoutes.js";
@@ -21,7 +24,6 @@ import StaffDetails from "./src/Routes/Data-maintenance/staff-details-routes.js"
 import StudentComplaintRecords from "./src/Routes/Data-maintenance/sudent-complain-records-routes.js";
 
 //user info
-// import StudentInfo from "./src/Routes/User/student-info.js";
 import userRoutes from "./src/Routes/User/User-routes.js";
 
 //Payment
@@ -39,12 +41,33 @@ import bosVotingRoutes from "./src/Routes/BOS/bos-votingRoutes.js";
 // DirectMeet Management
 import DirectMeetRoutes from "./src/Routes/DirectMeet/DirectMeetRoutes.js";
 
-// Notification
-import notificationRoutes from "./src/Notification/routes.js";
-
 // Voting Scheduler
 import { startPollStatusScheduler, startDeadlineChecker } from "./src/Utils/voting-scheduler.js";
+// Announcement
+import announcementRoutes from './src/Routes/Announcement/AnnouncementRoutes.js';
+// Advertisement 
+import advertisementRoutes from './src/Routes/Advertisement/AdvertisementRoutes.js';
 
+// Notification
+import notificationRoutes from "./src/Routes/Notification-Routes/routes.js";
+
+//notification bell
+import notificationBellRoutes from './src/Routes/NotificationBell/NotificationBellRoutes.js';
+import joinRequestRoutes from './src/Routes/NotificationBell/joinRequestRoutes.js';
+import materialRoutes from './src/Routes/NotificationBell/materialRoutes.js';
+
+// Tutor Management
+import tutorRoutes from './src/Routes/Tutor/Tutor-Routes.js';
+import courseRoutes from './src/Routes/Tutor/Tutor-course-routes.js';
+
+
+// PCM routes for managing PCM-class meetings
+import pcmRoutes from "./src/Routes/Student-PCM/pcmRoutes.js";
+
+// Blog Management
+import blogRoutes from "./src/Routes/Blog/blogRoutes.js";
+
+import path from 'path';
 dotenv.config();
 
 const app = express();
@@ -53,14 +76,28 @@ const PORT = process.env.PORT;
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '100mb' }));
+app.use((req,res,next) => {next();});
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+
+app.use(express.static('public'));
+
+// Public Routes (before authentication middleware)
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+// Blog Management (public routes first)
+app.use('/api/blog', blogRoutes);
+
+// Apply authentication middleware for protected routes
 app.use(verifyToken);
 
 
 //Routes
 
-//login
+//Admin Login and Auth
 app.use("/", Login);
+
+//Admin Management
+app.use("/", AdminRoutes);
 
 //Courses
 app.use("/", Course);
@@ -76,7 +113,6 @@ app.use("/", StaffDetails);
 app.use("/", StudentComplaintRecords);
 
 //User Info
-// app.use("/", StudentInfo);
 app.use("/", userRoutes);
 
 //Payment
@@ -94,10 +130,29 @@ app.use("/", bosVotingRoutes);
 // DirectMeet Management
 app.use("/", DirectMeetRoutes);
 
+// create Tutor 
+app.use("/", tutorRoutes);
+
+// PCM class routes 
+app.use('/', pcmRoutes);
+
+// Tutor routes
+app.use("/", tutorRoutes);
+app.use("/", courseRoutes);
+
+
 // Notification
 app.use("/", notificationRoutes);
+app.use('/api/bell-notifications', notificationBellRoutes);
+app.use('/api/join-requests', joinRequestRoutes);
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+// matra app.use() lines
+app.use('/api/materials', materialRoutes);
 
+// Announcement and Advertisement
+app.use('/api/announcements', announcementRoutes);
+app.use('/api/advertisements', advertisementRoutes);
 
 // Create HTTP server and setup Socket.IO
 import http from "http";
@@ -126,5 +181,5 @@ server.listen(PORT, async () => {
   startPollStatusScheduler();
   startDeadlineChecker();
   
-  console.log(`Server (with Socket.IO) is running on http://localhost:${PORT}`);
+  console.log(`Server run with Socket.IO http://localhost:${PORT}`);
 });

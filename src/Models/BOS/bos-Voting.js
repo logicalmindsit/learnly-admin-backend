@@ -114,8 +114,8 @@ votingPollSchema.methods.isActive = function() {
 };
 
 // Method to check if user is eligible to vote
-votingPollSchema.methods.isEligibleToVote = function(userRole) {
-  return this.eligible_voters.includes(userRole);
+votingPollSchema.methods.isEligibleToVote = function(role) {
+  return this.eligible_voters.includes(role);
 };
 
 export default model("Bos-Voting-Poll", votingPollSchema);

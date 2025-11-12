@@ -136,7 +136,7 @@ const directMeetEmailTemplate = (user, directMeet) => {
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">Learnly</div>
+          <div class="logo">schoolemy</div>
           <p>Educational Institute</p>
         </div>
 
@@ -185,9 +185,9 @@ const directMeetEmailTemplate = (user, directMeet) => {
 
         <div class="footer">
           <p><strong>Best regards,</strong><br>
-          The Learnly Team</p>
+          The schoolemy Team</p>
           <hr style="margin: 20px 0;">
-          <p>© 2025 Learnly Educational Institute. All Rights Reserved.</p>
+          <p>© 2025 schoolemy Educational Institute. All Rights Reserved.</p>
           <p>This is an automated message. Please do not reply to this email.</p>
         </div>
       </div>
