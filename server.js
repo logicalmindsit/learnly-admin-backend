@@ -67,6 +67,9 @@ import pcmRoutes from "./src/Routes/Student-PCM/pcmRoutes.js";
 // Blog Management
 import blogRoutes from "./src/Routes/Blog/blogRoutes.js";
 
+//Event Management
+import eventManageRoutes from "./src/Routes/Event-Manage-Routes/event-manage-routes.js";
+
 import path from 'path';
 dotenv.config();
 
@@ -153,6 +156,10 @@ app.use('/api/materials', materialRoutes);
 // Announcement and Advertisement
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/advertisements', advertisementRoutes);
+
+
+// Event Management
+app.use("/", eventManageRoutes); 
 
 // Create HTTP server and setup Socket.IO
 import http from "http";
