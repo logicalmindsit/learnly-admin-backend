@@ -70,6 +70,10 @@ import blogRoutes from "./src/Routes/Blog/blogRoutes.js";
 //Event Management
 import eventManageRoutes from "./src/Routes/Event-Manage-Routes/event-manage-routes.js";
 
+// Financial Management
+import donationRoutes from "./src/Routes/Financial/DonationRoutes.js";
+import expenseRoutes from "./src/Routes/Financial/ExpenseRoutes.js";
+
 import path from 'path';
 dotenv.config();
 
@@ -160,6 +164,10 @@ app.use('/api/advertisements', advertisementRoutes);
 
 // Event Management
 app.use("/", eventManageRoutes); 
+
+// Financial Management
+app.use("/api", donationRoutes);
+app.use("/api", expenseRoutes);
 
 // Create HTTP server and setup Socket.IO
 import http from "http";

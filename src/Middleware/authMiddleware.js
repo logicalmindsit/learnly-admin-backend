@@ -18,7 +18,7 @@ const verifyToken = async (req, res, next) => {
       "/api/blog/admin/all",
       "/api/announcements/latest",
       "/api/advertisements/active",
-      "/api/my-materials" ,
+      "/api/my-materials",
     ];
 
     if (publicPaths.includes(PATH)) {
