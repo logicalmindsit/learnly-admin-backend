@@ -133,7 +133,7 @@ const expenseSchema = new mongoose.Schema(
 expenseSchema.index({ date: -1 });
 expenseSchema.index({ status: 1 });
 expenseSchema.index({ category: 1 });
-expenseSchema.index({ invoiceNumber: 1 });
+// invoiceNumber already has an index from unique: true
 
 // Generate invoice number before saving
 expenseSchema.pre("save", async function (next) {

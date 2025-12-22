@@ -107,7 +107,7 @@ const donationSchema = new mongoose.Schema(
 donationSchema.index({ date: -1 });
 donationSchema.index({ status: 1 });
 donationSchema.index({ category: 1 });
-donationSchema.index({ receiptNumber: 1 });
+// receiptNumber already has an index from unique: true
 
 // Generate receipt number before saving
 donationSchema.pre("save", async function (next) {
