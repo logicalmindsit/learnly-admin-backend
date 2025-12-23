@@ -22,9 +22,14 @@ const getRoleDisplayName = (role) => {
     admin: "Admin",
     boscontroller: "BOS Controller",
     bosmembers: "BOS Member",
-    datamaintenance: "Data Maintenance",
-    coursecontroller: "Course Controller",
-    markettingcontroller: "Marketing Controller",
+    committeeoftrustees: "Committee of Trustees",
+    coursemanagement: "Course Management",
+    tutormanagement: "Tutor Management",
+    usermanagement: "User Management",
+    documentverification: "Document Verification",
+    marketing: "Marketing",
+    auditor: "Auditor",
+    financial: "Financial",
   };
   return roleMap[role] || role;
 };
