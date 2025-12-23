@@ -15,6 +15,19 @@ const donationSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    panNumber: {
+      type: String,
+      trim: true,
+      required: function() { return !this.isAnonymous; },
+    },
+    upiId: {
+      type: String,
+      trim: true,
+    },
+    chequeNumber: {
+      type: String,
+      trim: true,
+    },
     amount: {
       type: Number,
       required: true,
@@ -107,14 +120,22 @@ const donationSchema = new mongoose.Schema(
 donationSchema.index({ date: -1 });
 donationSchema.index({ status: 1 });
 donationSchema.index({ category: 1 });
-// receiptNumber already has an index from unique: true
+donationSchema.index({ receiptNumber: 1 });
 
-// Generate receipt number before saving
+// Generate receipt number before saving (financial year Apr 1 - Mar 31)
 donationSchema.pre("save", async function (next) {
   if (!this.receiptNumber) {
-    const count = await mongoose.models.Donation.countDocuments();
-    const year = new Date().getFullYear();
-    this.receiptNumber = `DON-${year}-${String(count + 1).padStart(5, "0")}`;
+    const docDate = this.date ? new Date(this.date) : new Date();
+    const fyStartYear = docDate.getMonth() + 1 >= 4 ? docDate.getFullYear() : docDate.getFullYear() - 1;
+    const fyStart = new Date(fyStartYear, 3, 1);
+    const fyEnd = new Date(fyStartYear + 1, 3, 1);
+
+    const count = await mongoose.models.Donation.countDocuments({
+      date: { $gte: fyStart, $lt: fyEnd },
+    });
+
+    const fyLabel = `${fyStartYear}-${fyStartYear + 1}`; // e.g. 2025-2026
+    this.receiptNumber = `DON-GKVK-${fyLabel}-${String(count + 1).padStart(5, "0")}`;
   }
   next();
 });

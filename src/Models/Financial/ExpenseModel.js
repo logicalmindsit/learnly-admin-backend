@@ -16,6 +16,7 @@ const expenseSchema = new mongoose.Schema(
       type: String,
       enum: [
         "Salary",
+        "Website Maintenance",
         "Infrastructure",
         "Utilities",
         "Supplies",
@@ -133,14 +134,22 @@ const expenseSchema = new mongoose.Schema(
 expenseSchema.index({ date: -1 });
 expenseSchema.index({ status: 1 });
 expenseSchema.index({ category: 1 });
-// invoiceNumber already has an index from unique: true
+expenseSchema.index({ invoiceNumber: 1 });
 
-// Generate invoice number before saving
+// Generate invoice number before saving (financial year Apr 1 - Mar 31)
 expenseSchema.pre("save", async function (next) {
   if (!this.invoiceNumber) {
-    const count = await mongoose.models.Expense.countDocuments();
-    const year = new Date().getFullYear();
-    this.invoiceNumber = `EXP-${year}-${String(count + 1).padStart(5, "0")}`;
+    const docDate = this.date ? new Date(this.date) : new Date();
+    const fyStartYear = docDate.getMonth() + 1 >= 4 ? docDate.getFullYear() : docDate.getFullYear() - 1;
+    const fyStart = new Date(fyStartYear, 3, 1); // April 1
+    const fyEnd = new Date(fyStartYear + 1, 3, 1); // next April 1
+
+    const count = await mongoose.models.Expense.countDocuments({
+      date: { $gte: fyStart, $lt: fyEnd },
+    });
+
+    const fyLabel = `${fyStartYear}-${fyStartYear + 1}`; // e.g. 2025-2026
+    this.invoiceNumber = `EXP-GKVK-${fyLabel}-${String(count + 1).padStart(5, "0")}`;
   }
   next();
 });

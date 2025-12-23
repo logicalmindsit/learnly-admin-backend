@@ -4,6 +4,14 @@ import mongoose from "mongoose";
 // Create new donation
 export const createDonation = async (req, res) => {
   try {
+    // Server-side validation: PAN is required for non-anonymous donations
+    if (!req.body.isAnonymous && !req.body.panNumber) {
+      return res.status(400).json({
+        success: false,
+        message: "PAN number is required for non-anonymous donations",
+      });
+    }
+
     const donation = new Donation({
       ...req.body,
       createdBy: req.user.id,
