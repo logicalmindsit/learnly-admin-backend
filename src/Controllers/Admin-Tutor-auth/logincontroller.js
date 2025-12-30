@@ -1,7 +1,7 @@
 import Admin from "../../Models/Admin/Admin-login-Model.js";
 import Tutor from "../../Models/Tutor/TutorModel.js";
 
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 import { JwtToken } from "../../Utils/JwtToken.js";
 import { generateOtp } from "../../Utils/OTPGenerate.js";

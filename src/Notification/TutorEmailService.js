@@ -29,13 +29,13 @@ if (isEmailConfigured) {
     socketTimeout: 10000
   });
 
-  // Verify connection configuration
-  transporter.verify(function (error, success) {
-    if (error) {
-      console.error("❌ Email transporter verification failed:", error);
-      console.error("❌ Please check your EMAIL_ADMIN and EMAIL_PASS in .env file");
-    } 
-  });
+  // Verify connection configuration (disabled for serverless)
+  // transporter.verify(function (error, success) {
+  //   if (error) {
+  //     console.error("❌ Email transporter verification failed:", error);
+  //     console.error("❌ Please check your EMAIL_ADMIN and EMAIL_PASS in .env file");
+  //   } 
+  // });
 } else {
   console.warn("⚠️  Email credentials not configured. Email notifications will be disabled.");
   console.warn("⚠️  Set EMAIL_ADMIN and EMAIL_PASS in .env file to enable email functionality.");

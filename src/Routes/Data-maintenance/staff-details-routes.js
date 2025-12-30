@@ -3,8 +3,9 @@ import {createStaff,getAllStaff,updateStaff,deleteStaff} from '../../Controllers
 import multer from 'multer';
 const router = express.Router();
 
-// Configure multer for file upload
-const upload = multer({ dest: 'uploads/' });
+// Configure multer for file upload with memory storage
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 // Create new staff
 router.post('/post-create-staff', upload.single('profilePicture'), createStaff);

@@ -1,5 +1,5 @@
 import Tutor from "../../Models/Tutor/TutorModel.js";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { sendTutorCredentialsEmail } from "../../Notification/TutorEmailService.js";
 
 // 🔹 Validate base64 image

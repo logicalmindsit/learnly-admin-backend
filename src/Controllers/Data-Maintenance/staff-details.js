@@ -1,7 +1,6 @@
 
 import StaffDetails from "../../Models/Data-Maintenance/staff-details-model.js";
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
-import fs from "fs";
 
 // Configure AWS S3
 const s3 = new S3Client({
@@ -17,7 +16,7 @@ const uploadToS3 = async (file) => {
   const params = {
     Bucket: process.env.AWS_BUCKET_NAME,
     Key: `staff-profiles/${Date.now()}-${file.originalname}`,
-    Body: fs.createReadStream(file.path),
+    Body: file.buffer,
     ContentType: file.mimetype,
   };
 
@@ -90,8 +89,7 @@ export const createStaff = async (req, res) => {
         url: result.Location,
       };
 
-      fs.unlinkSync(req.file.path);
-      console.log("🧹 Temporary file deleted from local uploads folder:", req.file.path);
+      console.log("🧹 File uploaded to S3:", result.Key);
     }
 
     const staff = await StaffDetails.create(staffData);
@@ -176,8 +174,6 @@ export const updateStaff = async (req, res) => {
         public_id: result.Key,
         url: result.Location,
       };
-      // Remove file from local storage after upload
-      fs.unlinkSync(req.file.path);
     }
 
     const updatedStaff = await StaffDetails.findByIdAndUpdate(id, updateData, {

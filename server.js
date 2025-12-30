@@ -1,6 +1,8 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import bodyParser from "body-parser";
+
 import connectDB from "./src/DB/db.js";
 import { verifyToken } from "./src/Middleware/authMiddleware.js";
 
@@ -81,10 +83,11 @@ const app = express();
 const PORT = process.env.PORT;
 
 // Middleware
+app.use(bodyParser.json({ limit: "100mb" }));
+app.use(bodyParser.urlencoded({ limit: "100mb", extended: true }));
 app.use(cors());
-app.use(express.json({ limit: '100mb' }));
+app.use(express.json());
 app.use((req,res,next) => {next();});
-app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 app.use(express.static('public'));
 
@@ -189,12 +192,18 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(PORT, async () => {
-  await connectDB();
-  
-  // Start voting system schedulers
-  startPollStatusScheduler();
-  startDeadlineChecker();
-  
-  console.log(`Server run with Socket.IO http://localhost:${PORT}`);
-});
+// Conditionally start server for local development
+if (process.env.NODE_ENV !== 'lambda') {
+  server.listen(PORT, async () => {
+    await connectDB();
+    
+    // Start voting system schedulers
+    startPollStatusScheduler();
+    startDeadlineChecker();
+    
+    console.log(`Server run with Socket.IO http://localhost:${PORT}`);
+  });
+}
+
+// Export the app for serverless
+export default app;

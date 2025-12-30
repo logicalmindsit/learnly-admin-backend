@@ -10,16 +10,7 @@ import { sendMaterial } from '../../Controllers/Notificationbell/MaterialControl
 const router = express.Router();
 
 // Multer setup (file upload-kaaga)
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    // Unga project-la 'uploads/materials' nu oru folder irukkaanu uruthi paduthikonga
-    cb(null, './uploads/materials'); 
-  },
-  filename: (req, file, cb) => {
-    // File name duplicate aagama irukka, date-a serkrom
-    cb(null, `${Date.now()}-${file.originalname}`);
-  },
-});
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 // Route definition
