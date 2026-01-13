@@ -134,7 +134,6 @@ const expenseSchema = new mongoose.Schema(
 expenseSchema.index({ date: -1 });
 expenseSchema.index({ status: 1 });
 expenseSchema.index({ category: 1 });
-expenseSchema.index({ invoiceNumber: 1 });
 
 // Generate invoice number before saving (financial year Apr 1 - Mar 31)
 expenseSchema.pre("save", async function (next) {
